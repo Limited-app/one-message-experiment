@@ -1,0 +1,3 @@
+# Place whisper.mp3 audio file here
+# The app will play this sound when locking a message
+# If no file is present, the app works without sound
