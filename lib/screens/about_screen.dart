@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import '../constants/app_constants.dart';
-import '../services/premium_service.dart';
 import '../services/storage_service.dart';
-import '../services/haptic_service.dart';
 import '../widgets/animated_background.dart';
 
 class AboutScreen extends StatefulWidget {
@@ -16,7 +15,6 @@ class _AboutScreenState extends State<AboutScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _pulseController;
   int _totalLocked = 0;
-  bool _isPurchasing = false;
 
   @override
   void initState() {
@@ -40,20 +38,8 @@ class _AboutScreenState extends State<AboutScreen>
     super.dispose();
   }
 
-  Future<void> _purchase() async {
-    setState(() => _isPurchasing = true);
-    HapticService.instance.mediumImpact();
-    await PremiumService.instance.purchasePremium();
-    if (mounted) {
-      setState(() => _isPurchasing = false);
-      HapticService.instance.heavyImpact();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    final isPremium = PremiumService.instance.isPremium;
-
     return Scaffold(
       backgroundColor: AppColors.void_,
       body: AnimatedBackground(
@@ -83,21 +69,8 @@ class _AboutScreenState extends State<AboutScreen>
                       ),
                     ),
                     const Spacer(),
-                    if (isPremium)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: AppColors.sacred),
-                          borderRadius: BorderRadius.circular(AppRadius.full),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.diamond_rounded, color: AppColors.sacred, size: 14),
-                            const SizedBox(width: 6),
-                            Text('PRO', style: AppTypography.labelMedium.copyWith(color: AppColors.sacred)),
-                          ],
-                        ),
-                      ),
+                    Text('ABOUT', style: AppTypography.labelMedium.copyWith(color: AppColors.textMuted)),
+                    const SizedBox(width: 44),
                   ],
                 ),
                 
@@ -115,23 +88,23 @@ class _AboutScreenState extends State<AboutScreen>
                         border: Border.all(color: AppColors.sacred, width: 2),
                         boxShadow: AppShadows.glow(AppColors.sacred, intensity: 0.3 + (_pulseController.value * 0.2)),
                       ),
-                      child: const Icon(Icons.diamond_outlined, color: AppColors.sacred, size: 40),
+                      child: const Icon(Icons.lock_rounded, color: AppColors.sacred, size: 40),
                     );
                   },
                 ),
                 
                 const SizedBox(height: AppSpacing.xl),
                 
-                Text('UNLOCK EVERYTHING', style: AppTypography.displayMedium.copyWith(letterSpacing: 4)),
+                Text('LIMITED', style: AppTypography.displayMedium.copyWith(letterSpacing: 8)),
                 const SizedBox(height: AppSpacing.sm),
-                Text('One purchase. Forever access.', style: AppTypography.bodyMedium),
+                Text('One truth. Sealed forever.', style: AppTypography.bodyMedium.copyWith(fontStyle: FontStyle.italic)),
                 
                 const SizedBox(height: AppSpacing.xxl),
                 
                 // Features
-                _buildFeature(Icons.grid_view_rounded, 'ALL 10 CATEGORIES', 'Including Forgive, Love, Goodbye, and more'),
-                _buildFeature(Icons.block_rounded, 'NO ADS', 'Complete, uninterrupted experience'),
-                _buildFeature(Icons.auto_awesome_rounded, 'FINAL TRUTH', 'One ultimate message that self-destructs'),
+                _buildFeature(Icons.looks_one_rounded, 'ONE CHANCE', 'Each category can only be written once'),
+                _buildFeature(Icons.lock_rounded, 'SEALED FOREVER', 'No edits. No deletes. Permanent.'),
+                _buildFeature(Icons.all_inclusive_rounded, '10 CATEGORIES', 'Confess, Forgive, Remember, Love, and more'),
                 
                 const SizedBox(height: AppSpacing.xxl),
                 
@@ -157,41 +130,36 @@ class _AboutScreenState extends State<AboutScreen>
                 
                 const SizedBox(height: AppSpacing.xxl),
                 
-                // Purchase button
-                if (!isPremium)
-                  GestureDetector(
-                    onTap: _isPurchasing ? null : _purchase,
-                    child: AnimatedBuilder(
-                      animation: _pulseController,
-                      builder: (context, child) {
-                        return Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.md + 4),
-                          decoration: BoxDecoration(
-                            color: AppColors.sacred.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(AppRadius.full),
-                            border: Border.all(color: AppColors.sacred, width: 2),
-                            boxShadow: AppShadows.glow(AppColors.sacred, intensity: 0.3 + (_pulseController.value * 0.15)),
-                          ),
-                          child: _isPurchasing
-                              ? const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: AppColors.sacred, strokeWidth: 2)))
-                              : Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const Icon(Icons.diamond_rounded, color: AppColors.sacred, size: 20),
-                                    const SizedBox(width: 8),
-                                    Text('UNLOCK PRO', style: AppTypography.labelLarge.copyWith(color: AppColors.sacred, letterSpacing: 3)),
-                                  ],
-                                ),
-                        );
-                      },
-                    ),
+                // Share button
+                GestureDetector(
+                  onTap: () => Share.share(AppStrings.inviteMessage),
+                  child: AnimatedBuilder(
+                    animation: _pulseController,
+                    builder: (context, child) {
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(vertical: AppSpacing.md + 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.sacred.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(AppRadius.full),
+                          border: Border.all(color: AppColors.sacred, width: 2),
+                          boxShadow: AppShadows.glow(AppColors.sacred, intensity: 0.2 + (_pulseController.value * 0.1)),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.share_rounded, color: AppColors.sacred, size: 20),
+                            const SizedBox(width: 8),
+                            Text('SHARE LIMITED', style: AppTypography.labelLarge.copyWith(color: AppColors.sacred, letterSpacing: 3)),
+                          ],
+                        ),
+                      );
+                    },
                   ),
+                ),
                 
-                if (!isPremium) ...[
-                  const SizedBox(height: AppSpacing.md),
-                  Text('One-time purchase • No subscription', style: AppTypography.caption),
-                ],
+                const SizedBox(height: AppSpacing.md),
+                Text('Help others find their truth', style: AppTypography.caption),
                 
                 const SizedBox(height: AppSpacing.huge),
               ],

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../constants/app_constants.dart';
 import '../services/storage_service.dart';
-import '../services/premium_service.dart';
 import '../services/haptic_service.dart';
 import '../widgets/animated_background.dart';
 
@@ -61,13 +60,6 @@ class _CategoryScreenState extends State<CategoryScreen>
     if (_sealedCategories[category] == true) {
       HapticService.instance.heavyImpact();
       _showSealedDialog(category);
-      return;
-    }
-    
-    final isPremium = AppCategories.premium.contains(category);
-    if (isPremium && !PremiumService.instance.isPremium) {
-      HapticService.instance.mediumImpact();
-      Navigator.pushNamed(context, '/about');
       return;
     }
     
@@ -171,10 +163,8 @@ class _CategoryScreenState extends State<CategoryScreen>
               ),
               IconButton(
                 onPressed: () => Navigator.pushNamed(context, '/about'),
-                icon: const Icon(Icons.diamond_outlined),
-                color: PremiumService.instance.isPremium 
-                    ? AppColors.sacred 
-                    : AppColors.textSecondary,
+                icon: const Icon(Icons.info_outline_rounded),
+                color: AppColors.textSecondary,
               ),
             ],
           ),
@@ -245,8 +235,6 @@ class _CategoryScreenState extends State<CategoryScreen>
 
   Widget _buildCategoryCard(String category, int index) {
     final isSealed = _sealedCategories[category] ?? false;
-    final isPremium = AppCategories.premium.contains(category);
-    final isLocked = isPremium && !PremiumService.instance.isPremium;
     final color = AppColors.categoryColors[category] ?? AppColors.sacred;
     final icon = AppCategories.icons[category] ?? Icons.lock;
     final tagline = AppCategories.taglines[category] ?? '';
@@ -263,9 +251,7 @@ class _CategoryScreenState extends State<CategoryScreen>
           border: Border.all(
             color: isSealed 
                 ? color.withOpacity(0.5) 
-                : isLocked 
-                    ? AppColors.frostBorder 
-                    : color.withOpacity(0.3),
+                : color.withOpacity(0.3),
             width: isSealed ? 2 : 1,
           ),
           boxShadow: isSealed 
@@ -324,29 +310,6 @@ class _CategoryScreenState extends State<CategoryScreen>
                 ],
               ),
             ),
-            
-            // Premium badge
-            if (isLocked && !isSealed)
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.sacred.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(AppRadius.sm),
-                    border: Border.all(color: AppColors.sacred.withOpacity(0.4)),
-                  ),
-                  child: Text(
-                    'PRO',
-                    style: AppTypography.caption.copyWith(
-                      color: AppColors.sacred,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
             
             // Sealed glow overlay
             if (isSealed)
