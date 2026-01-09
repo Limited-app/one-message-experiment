@@ -15,7 +15,7 @@ class _SealedScreenState extends State<SealedScreen>
   late AnimationController _pulseController;
   late AnimationController _revealController;
   
-  int _countdown = 10;
+  int _countdown = 3;
   bool _rewardReady = false;
 
   @override
@@ -37,7 +37,7 @@ class _SealedScreenState extends State<SealedScreen>
 
   Future<void> _startDelayedReveal() async {
     // Countdown with heartbeat haptics
-    for (int i = 10; i >= 1; i--) {
+    for (int i = 3; i >= 1; i--) {
       if (!mounted) return;
       
       setState(() => _countdown = i);

@@ -289,13 +289,14 @@ class _WriteScreenState extends State<WriteScreen>
             color: _focusNode.hasFocus ? color.withOpacity(0.5) : AppColors.frostBorder,
           ),
         ),
+        constraints: const BoxConstraints(maxHeight: 200),
         child: TextField(
           controller: _controller,
           focusNode: _focusNode,
-          maxLines: null,
-          expands: true,
+          maxLines: 6,
+          minLines: 3,
           maxLength: _maxChars,
-          style: AppTypography.bodyLarge.copyWith(color: AppColors.textPrimary, height: 1.8),
+          style: AppTypography.bodyLarge.copyWith(color: AppColors.textPrimary, height: 1.6),
           decoration: InputDecoration(
             hintText: tagline,
             hintStyle: AppTypography.bodyLarge.copyWith(
