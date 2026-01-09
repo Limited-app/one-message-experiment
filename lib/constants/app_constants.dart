@@ -221,9 +221,9 @@ class AppAnimations {
 }
 
 class AppCategories {
-  static const List<String> free = ['Confess', 'Remember', 'Gratitude', 'Hope'];
-  static const List<String> premium = ['Forgive', 'Promise', 'Regret', 'Fear', 'Goodbye', 'Love'];
-  static const List<String> all = [...free, ...premium];
+  static const List<String> free = ['Confess', 'Remember', 'Gratitude', 'Hope', 'Forgive', 'Promise', 'Regret', 'Fear', 'Goodbye', 'Love'];
+  static const List<String> premium = []; // All categories now free for viral growth
+  static const List<String> all = [...free];
   
   static const Map<String, IconData> icons = {
     'Confess': Icons.privacy_tip_rounded,

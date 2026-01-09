@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 import '../constants/app_constants.dart';
 import '../services/ads_service.dart';
 import '../services/storage_service.dart';
@@ -15,47 +16,67 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
-  late AnimationController _vaultController;
+  late AnimationController _lockController;
   late AnimationController _textController;
+  late AnimationController _messageController;
   late AnimationController _counterController;
   late AnimationController _pulseController;
+  late AnimationController _shakeController;
   
-  late Animation<double> _vaultAnimation;
+  late Animation<double> _lockAnimation;
   late Animation<double> _textAnimation;
+  late Animation<double> _messageAnimation;
   late Animation<double> _counterAnimation;
   
   int _displayedCount = 0;
-  int _targetCount = 523; // Will be fetched from Firebase
-  bool _ready = false; // Show enter button when ready
+  int _targetCount = 523;
+  bool _ready = false;
+  bool _lockClosed = false;
 
   @override
   void initState() {
     super.initState();
     
-    // Vault door opening
-    _vaultController = AnimationController(
+    // Lock closing animation (starts open, closes)
+    _lockController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2000),
+      duration: const Duration(milliseconds: 800),
     );
-    _vaultAnimation = CurvedAnimation(
-      parent: _vaultController,
-      curve: Curves.easeOutCubic,
+    _lockAnimation = CurvedAnimation(
+      parent: _lockController,
+      curve: Curves.easeInOutBack,
     );
     
-    // Text fade in
+    // Shake effect when lock closes
+    _shakeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    
+    // App name fade in
     _textController = AnimationController(
       vsync: this,
-      duration: AppAnimations.slow,
+      duration: const Duration(milliseconds: 800),
     );
     _textAnimation = CurvedAnimation(
       parent: _textController,
       curve: Curves.easeOut,
     );
     
+    // "Once locked" message fade in
+    _messageController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    );
+    _messageAnimation = CurvedAnimation(
+      parent: _messageController,
+      curve: Curves.easeOut,
+    );
+    
     // Counter animation
     _counterController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 2000),
     );
     _counterAnimation = CurvedAnimation(
       parent: _counterController,
@@ -67,31 +88,39 @@ class _SplashScreenState extends State<SplashScreen>
       });
     });
     
-    // Pulse
+    // Subtle pulse for glow
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 2000),
     )..repeat(reverse: true);
     
     _startSequence();
   }
 
   Future<void> _startSequence() async {
-    await Future.delayed(const Duration(milliseconds: 500));
+    // Initialize services in background
+    _initializeServices();
     
-    // Open vault
-    _vaultController.forward();
-    await Future.delayed(const Duration(milliseconds: 1200));
+    await Future.delayed(const Duration(milliseconds: 600));
     
-    // Show text
+    // Show app name first
     _textController.forward();
+    await Future.delayed(const Duration(milliseconds: 1000));
+    
+    // Close the lock with dramatic effect
+    _lockController.forward();
+    await Future.delayed(const Duration(milliseconds: 400));
+    setState(() => _lockClosed = true);
+    _shakeController.forward();
+    
+    await Future.delayed(const Duration(milliseconds: 600));
+    
+    // Fade in the "once locked" message
+    _messageController.forward();
     await Future.delayed(const Duration(milliseconds: 800));
     
     // Count up (social proof)
     _counterController.forward();
-    
-    // Initialize services
-    await _initializeServices();
     
     // Show enter button
     await Future.delayed(const Duration(milliseconds: 1500));
@@ -127,10 +156,12 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
-    _vaultController.dispose();
+    _lockController.dispose();
     _textController.dispose();
+    _messageController.dispose();
     _counterController.dispose();
     _pulseController.dispose();
+    _shakeController.dispose();
     super.dispose();
   }
 
@@ -140,7 +171,22 @@ class _SplashScreenState extends State<SplashScreen>
       backgroundColor: AppColors.void_,
       body: Stack(
         children: [
-          // Pulsing background glow
+          // Elegant gradient background
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  AppColors.void_,
+                  AppColors.voidDeep,
+                  AppColors.void_,
+                ],
+              ),
+            ),
+          ),
+          
+          // Pulsing center glow
           AnimatedBuilder(
             animation: _pulseController,
             builder: (context, child) {
@@ -148,10 +194,11 @@ class _SplashScreenState extends State<SplashScreen>
                 decoration: BoxDecoration(
                   gradient: RadialGradient(
                     center: Alignment.center,
-                    radius: 1.5,
+                    radius: 0.8,
                     colors: [
-                      AppColors.pulse.withOpacity(0.05 + (_pulseController.value * 0.03)),
-                      AppColors.void_,
+                      (_lockClosed ? AppColors.sacred : AppColors.textMuted)
+                          .withOpacity(0.08 + (_pulseController.value * 0.04)),
+                      Colors.transparent,
                     ],
                   ),
                 ),
@@ -159,128 +206,199 @@ class _SplashScreenState extends State<SplashScreen>
             },
           ),
           
-          // Content
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Vault icon
-                AnimatedBuilder(
-                  animation: _vaultAnimation,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: 0.5 + (_vaultAnimation.value * 0.5),
-                      child: Opacity(
-                        opacity: _vaultAnimation.value,
+          // Main content
+          SafeArea(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Spacer(flex: 2),
+                  
+                  // Animated Lock Icon
+                  AnimatedBuilder(
+                    animation: Listenable.merge([_lockAnimation, _shakeController]),
+                    builder: (context, child) {
+                      final shakeOffset = _shakeController.isAnimating
+                          ? math.sin(_shakeController.value * math.pi * 4) * 3
+                          : 0.0;
+                      
+                      return Transform.translate(
+                        offset: Offset(shakeOffset, 0),
                         child: Container(
-                          width: 120,
-                          height: 120,
+                          width: 140,
+                          height: 140,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
+                            color: AppColors.frost.withOpacity(0.05),
                             border: Border.all(
-                              color: AppColors.sacred.withOpacity(0.6),
-                              width: 2,
+                              color: _lockClosed 
+                                  ? AppColors.sacred.withOpacity(0.8)
+                                  : AppColors.textMuted.withOpacity(0.3),
+                              width: _lockClosed ? 3 : 2,
                             ),
-                            boxShadow: AppShadows.glow(AppColors.sacred, intensity: 0.4),
+                            boxShadow: _lockClosed 
+                                ? AppShadows.glow(AppColors.sacred, intensity: 0.5)
+                                : null,
                           ),
-                          child: Icon(
-                            _vaultAnimation.value < 0.5 
-                                ? Icons.lock_rounded 
-                                : Icons.lock_open_rounded,
-                            color: AppColors.sacred,
-                            size: 48,
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 300),
+                            child: Icon(
+                              _lockClosed ? Icons.lock_rounded : Icons.lock_open_rounded,
+                              key: ValueKey(_lockClosed),
+                              color: _lockClosed ? AppColors.sacred : AppColors.textMuted,
+                              size: 56,
+                            ),
                           ),
                         ),
-                      ),
-                    );
-                  },
-                ),
-                
-                const SizedBox(height: AppSpacing.xxl),
-                
-                // App name
-                FadeTransition(
-                  opacity: _textAnimation,
-                  child: Text(
-                    'LIMITED',
-                    style: AppTypography.displayLarge.copyWith(
-                      color: AppColors.textPrimary,
-                      letterSpacing: 16,
+                      );
+                    },
+                  ),
+                  
+                  const SizedBox(height: 48),
+                  
+                  // App name with elegant typography
+                  FadeTransition(
+                    opacity: _textAnimation,
+                    child: Column(
+                      children: [
+                        Text(
+                          'LIMITED',
+                          style: AppTypography.displayLarge.copyWith(
+                            color: AppColors.textPrimary,
+                            letterSpacing: 20,
+                            fontWeight: FontWeight.w200,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Container(
+                          width: 60,
+                          height: 1,
+                          color: AppColors.sacred.withOpacity(0.5),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-                
-                const SizedBox(height: AppSpacing.md),
-                
-                // Tagline
-                FadeTransition(
-                  opacity: _textAnimation,
-                  child: Text(
-                    'ONE TRUTH. LOCKED FOREVER.',
-                    style: AppTypography.labelMedium.copyWith(
-                      color: AppColors.textMuted,
-                      letterSpacing: 4,
+                  
+                  const SizedBox(height: 32),
+                  
+                  // "Once locked, it's closed" message - fades in after lock closes
+                  FadeTransition(
+                    opacity: _messageAnimation,
+                    child: Text(
+                      'ONCE LOCKED, IT\'S CLOSED.',
+                      style: AppTypography.labelMedium.copyWith(
+                        color: AppColors.sacred,
+                        letterSpacing: 6,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
-                ),
-                
-                const SizedBox(height: AppSpacing.huge),
-                
-                // FOMO Counter - Social proof
-                FadeTransition(
-                  opacity: _textAnimation,
-                  child: Column(
-                    children: [
-                      Text(
-                        _formatNumber(_displayedCount),
-                        style: AppTypography.counter,
+                  
+                  const SizedBox(height: 16),
+                  
+                  FadeTransition(
+                    opacity: _messageAnimation,
+                    child: Text(
+                      'No edits. No deletes. Forever.',
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.textMuted,
+                        fontStyle: FontStyle.italic,
                       ),
-                      const SizedBox(height: AppSpacing.xs),
-                      Text(
-                        'TRUTHS SEALED FOREVER',
-                        style: AppTypography.counterLabel,
-                      ),
-                    ],
+                    ),
                   ),
-                ),
-              ],
+                  
+                  const Spacer(flex: 1),
+                  
+                  // Counter - Social proof
+                  FadeTransition(
+                    opacity: _messageAnimation,
+                    child: Column(
+                      children: [
+                        Text(
+                          _formatNumber(_displayedCount),
+                          style: AppTypography.counter.copyWith(
+                            fontSize: 48,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'TRUTHS SEALED FOREVER',
+                          style: AppTypography.counterLabel.copyWith(
+                            letterSpacing: 3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const Spacer(flex: 2),
+                ],
+              ),
             ),
           ),
           
           // Enter button at bottom
           Positioned(
-            bottom: 60,
-            left: 40,
-            right: 40,
+            bottom: 50,
+            left: 32,
+            right: 32,
             child: AnimatedOpacity(
               opacity: _ready ? 1.0 : 0.0,
-              duration: AppAnimations.slow,
-              child: GestureDetector(
-                onTap: _ready ? _enter : null,
-                child: AnimatedBuilder(
-                  animation: _pulseController,
-                  builder: (context, child) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md + 4),
-                      decoration: BoxDecoration(
-                        color: AppColors.sacred.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(AppRadius.full),
-                        border: Border.all(
-                          color: AppColors.sacred.withOpacity(0.5 + (_pulseController.value * 0.3)),
-                          width: 2,
+              duration: const Duration(milliseconds: 800),
+              child: AnimatedSlide(
+                offset: _ready ? Offset.zero : const Offset(0, 0.5),
+                duration: const Duration(milliseconds: 800),
+                curve: Curves.easeOutCubic,
+                child: GestureDetector(
+                  onTap: _ready ? _enter : null,
+                  child: AnimatedBuilder(
+                    animation: _pulseController,
+                    builder: (context, child) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              AppColors.sacred.withOpacity(0.2),
+                              AppColors.sacred.withOpacity(0.1),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(50),
+                          border: Border.all(
+                            color: AppColors.sacred.withOpacity(0.6 + (_pulseController.value * 0.2)),
+                            width: 2,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.sacred.withOpacity(0.3 + (_pulseController.value * 0.1)),
+                              blurRadius: 20,
+                              spreadRadius: 0,
+                            ),
+                          ],
                         ),
-                        boxShadow: AppShadows.glow(AppColors.sacred, intensity: 0.2 + (_pulseController.value * 0.15)),
-                      ),
-                      child: Text(
-                        'ENTER',
-                        textAlign: TextAlign.center,
-                        style: AppTypography.labelLarge.copyWith(
-                          color: AppColors.sacred,
-                          letterSpacing: 6,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'BEGIN YOUR TRUTH',
+                              style: AppTypography.labelLarge.copyWith(
+                                color: AppColors.sacred,
+                                letterSpacing: 4,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Icon(
+                              Icons.arrow_forward_rounded,
+                              color: AppColors.sacred,
+                              size: 20,
+                            ),
+                          ],
                         ),
-                      ),
-                    );
-                  },
+                      );
+                    },
+                  ),
                 ),
               ),
             ),
